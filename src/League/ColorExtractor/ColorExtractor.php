@@ -29,7 +29,10 @@ class ColorExtractor
             $this->initialize();
         }
 
-        return self::mergeColors($this->sortedColors, $colorCount, 100 / $colorCount);
+        $mergedColors = self::mergeColors($this->sortedColors, $colorCount, 100 / $colorCount);
+        arsort($mergedColors);
+
+        return $mergedColors;
     }
 
     /**
@@ -43,25 +46,24 @@ class ColorExtractor
     protected function initialize()
     {
         $queue = new \SplPriorityQueue();
-        $this->sortedColors = new \SplFixedArray(count($this->palette));
+        $this->sortedColors = [];
 
-        $i = 0;
+        $sum = 0;
         foreach ($this->palette as $color => $count) {
+            $sum += $count;
             $labColor = self::intColorToLab($color);
             $queue->insert(
-                $color,
+                [$color, $count],
                 (sqrt($labColor['a'] * $labColor['a'] + $labColor['b'] * $labColor['b']) ?: 1) *
                 (1 - $labColor['L'] / 200) *
                 sqrt($count)
             );
-            ++$i;
         }
 
-        $i = 0;
         while ($queue->valid()) {
-            $this->sortedColors[$i] = $queue->current();
+            list($color, $count) = $queue->current();
+            $this->sortedColors[$color] = $count / $sum;
             $queue->next();
-            ++$i;
         }
     }
 
@@ -72,22 +74,20 @@ class ColorExtractor
      *
      * @return array
      */
-    protected static function mergeColors(\SplFixedArray $colors, $limit, $maxDelta)
+    protected static function mergeColors($colors, $limit, $maxDelta)
     {
         $limit = min(count($colors), $limit);
-        if ($limit === 1) {
-            return [$colors[0]];
-        }
-        $labCache = new \SplFixedArray($limit - 1);
+        $labCache = [];
         $mergedColors = [];
 
-        foreach ($colors as $color) {
+        foreach ($colors as $color => $count) {
             $hasColorBeenMerged = false;
 
             $colorLab = self::intColorToLab($color);
 
-            foreach ($mergedColors as $i => $mergedColor) {
-                if (self::ciede2000DeltaE($colorLab, $labCache[$i]) < $maxDelta) {
+            foreach ($mergedColors as $mergedColor => $mergedCount) {
+                if (self::ciede2000DeltaE($colorLab, $labCache[$mergedColor]) < $maxDelta) {
+                    $mergedColors[$mergedColor] += $colors[$color];
                     $hasColorBeenMerged = true;
                     break;
                 }
@@ -97,14 +97,11 @@ class ColorExtractor
                 continue;
             }
 
-            $mergedColorCount = count($mergedColors);
-            $mergedColors[] = $color;
-
-            if ($mergedColorCount + 1 == $limit) {
-                break;
+            if (count($mergedColors) < $limit) {
+                $mergedColors[$color] = $count;
             }
 
-            $labCache[$mergedColorCount] = $colorLab;
+            $labCache[$color] = $colorLab;
         }
 
         return $mergedColors;
@@ -186,7 +183,7 @@ class ColorExtractor
      *
      * @return array
      */
-    protected static function intColorToLab($color)
+    public static function intColorToLab($color)
     {
         return self::xyzToLab(
             self::srgbToXyz(
