@@ -21,10 +21,6 @@ class ColorExtractor
         $this->colorCount = $colorCount;
     }
 
-    public function setColorCount($colorCount) {
-        $this->colorCount = $colorCount;
-    }
-
     public function getDimensions() {
         return $this->colorCount * 4;
     }
@@ -47,7 +43,7 @@ class ColorExtractor
         $descriptor = array_fill(0, $this->getDimensions(), 0);
         $i = 0;
         foreach ($mergedColors as $color => $amount) {
-            $lab = ColorExtractor::intColorToLab($color);
+            $lab = Color::intColorToLab($color);
             $descriptor[$i++] = $lab['L'];
             $descriptor[$i++] = $lab['a'];
             $descriptor[$i++] = $lab['b'];
@@ -73,7 +69,7 @@ class ColorExtractor
         $sum = 0;
         foreach ($this->palette as $color => $count) {
             $sum += $count;
-            $labColor = self::intColorToLab($color);
+            $labColor = Color::intColorToLab($color);
             $queue->insert(
                 [$color, $count],
                 (sqrt($labColor['a'] * $labColor['a'] + $labColor['b'] * $labColor['b']) ?: 1) *
@@ -105,7 +101,7 @@ class ColorExtractor
         foreach ($colors as $color => $count) {
             $hasColorBeenMerged = false;
 
-            $colorLab = self::intColorToLab($color);
+            $colorLab = Color::intColorToLab($color);
 
             foreach ($mergedColors as $mergedColor => $mergedCount) {
                 if (self::ciede2000DeltaE($colorLab, $labCache[$mergedColor]) < $maxDelta) {
@@ -198,97 +194,5 @@ class ColorExtractor
             pow($HpDelta / $Sh, 2) +
             $Rt * ($CpDelta / $Sc) * ($HpDelta / $Sh)
         );
-    }
-
-    /**
-     * @param int $color
-     *
-     * @return array
-     */
-    protected static function intColorToLab($color)
-    {
-        return self::xyzToLab(
-            self::srgbToXyz(
-                self::rgbToSrgb(
-                    [
-                        'R' => ($color >> 16) & 0xFF,
-                        'G' => ($color >> 8) & 0xFF,
-                        'B' => $color & 0xFF,
-                    ]
-                )
-            )
-        );
-    }
-
-    /**
-     * @param int $value
-     *
-     * @return float
-     */
-    protected static function rgbToSrgbStep($value)
-    {
-        $value /= 255;
-
-        return $value <= .03928 ?
-            $value / 12.92 :
-            pow(($value + .055) / 1.055, 2.4);
-    }
-
-    /**
-     * @param array $rgb
-     *
-     * @return array
-     */
-    protected static function rgbToSrgb($rgb)
-    {
-        return [
-            'R' => self::rgbToSrgbStep($rgb['R']),
-            'G' => self::rgbToSrgbStep($rgb['G']),
-            'B' => self::rgbToSrgbStep($rgb['B']),
-        ];
-    }
-
-    /**
-     * @param array $rgb
-     *
-     * @return array
-     */
-    protected static function srgbToXyz($rgb)
-    {
-        return [
-            'X' => (.4124564 * $rgb['R']) + (.3575761 * $rgb['G']) + (.1804375 * $rgb['B']),
-            'Y' => (.2126729 * $rgb['R']) + (.7151522 * $rgb['G']) + (.0721750 * $rgb['B']),
-            'Z' => (.0193339 * $rgb['R']) + (.1191920 * $rgb['G']) + (.9503041 * $rgb['B']),
-        ];
-    }
-
-    /**
-     * @param float $value
-     *
-     * @return float
-     */
-    protected static function xyzToLabStep($value)
-    {
-        return $value > 216 / 24389 ? pow($value, 1 / 3) : 841 * $value / 108 + 4 / 29;
-    }
-
-    /**
-     * @param array $xyz
-     *
-     * @return array
-     */
-    protected static function xyzToLab($xyz)
-    {
-        //http://en.wikipedia.org/wiki/Illuminant_D65#Definition
-        $Xn = .95047;
-        $Yn = 1;
-        $Zn = 1.08883;
-
-        // http://en.wikipedia.org/wiki/Lab_color_space#CIELAB-CIEXYZ_conversions
-        return [
-            'L' => 116 * self::xyzToLabStep($xyz['Y'] / $Yn) - 16,
-            'a' => 500 * (self::xyzToLabStep($xyz['X'] / $Xn) - self::xyzToLabStep($xyz['Y'] / $Yn)),
-            'b' => 200 * (self::xyzToLabStep($xyz['Y'] / $Yn) - self::xyzToLabStep($xyz['Z'] / $Zn)),
-        ];
     }
 }
