@@ -10,45 +10,17 @@ class ColorExtractor
     /** @var \SplFixedArray */
     protected $sortedColors;
 
-    /** @var int */
-    protected $colorCount;
-
-    /**
-     * @param \League\ColorExtractor\Palette $palette
-     */
-    public function __construct($colorCount)
-    {
-        $this->colorCount = $colorCount;
-    }
-
-    public function getDimensions() {
-        return $this->colorCount * 4;
-    }
-
     /**
      * @param string $filename
      *
      * @return array
      */
-    public function extract($filename)
+    public function extract($filename, $colorCount)
     {
         $this->palette = Palette::fromFilename($filename);
         $this->initialize();
 
-        $mergedColors = self::mergeColors($this->sortedColors, $this->colorCount, 100 / $this->colorCount);
-        arsort($mergedColors);
-
-        $descriptor = array_fill(0, $this->getDimensions(), 0);
-        $i = 0;
-        foreach ($mergedColors as $color => $amount) {
-            $lab = Color::intColorToLab($color);
-            $descriptor[$i++] = $lab['L'];
-            $descriptor[$i++] = $lab['a'];
-            $descriptor[$i++] = $lab['b'];
-            $descriptor[$i++] = $amount;
-        }
-
-        return $descriptor;
+        return self::mergeColors($this->sortedColors, $colorCount, 100 / $colorCount);
     }
 
     /**
