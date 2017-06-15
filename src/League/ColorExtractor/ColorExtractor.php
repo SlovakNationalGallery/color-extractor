@@ -33,9 +33,7 @@ class ColorExtractor
     public function extract($filename)
     {
         $this->palette = Palette::fromFilename($filename);
-        if (!$this->isInitialized()) {
-            $this->initialize();
-        }
+        $this->initialize();
 
         $mergedColors = self::mergeColors($this->sortedColors, $this->colorCount, 100 / $this->colorCount);
         arsort($mergedColors);
