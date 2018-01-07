@@ -33,9 +33,9 @@ class Color
     public static function fromIntToRgb($color)
     {
         return [
-            'r' => $color >> 16 & 0xFF,
-            'g' => $color >> 8 & 0xFF,
-            'b' => $color & 0xFF,
+            'R' => $color >> 16 & 0xFF,
+            'G' => $color >> 8 & 0xFF,
+            'B' => $color & 0xFF,
         ];
     }
 
@@ -46,7 +46,7 @@ class Color
      */
     public static function fromRgbToInt(array $components)
     {
-        return ($components['r'] * 65536) + ($components['g'] * 256) + ($components['b']);
+        return ($components['R'] * 65536) + ($components['G'] * 256) + ($components['B']);
     }
 
     /**
